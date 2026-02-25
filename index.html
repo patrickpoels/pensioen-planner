@@ -228,7 +228,10 @@
                                         <span class="cursor-pointer hover:text-red-600 transition block mb-1" title="Klik om kolom op nul te zetten" onclick="clearColumn('p2')">Partner</span>
                                         <input type="number" id="bulkP2" placeholder="Vast..." class="bulk-header-input no-print" onchange="updateGlobalParam('bulkP2', this.value)">
                                     </th>
-                                    <th class="p-4 w-24">Vastgoed</th>
+                                    <th class="p-4 w-24">
+                                        <span class="cursor-pointer hover:text-red-600 transition block mb-1" title="Klik om kolom op nul te zetten" onclick="clearColumn('re')">Vastgoed</span>
+                                        <input type="number" id="bulkRe" placeholder="Vast..." class="bulk-header-input no-print" onchange="updateGlobalParam('bulkRe', this.value)">
+                                    </th>
                                     <th class="p-4 w-28 border-r">
                                         <span class="cursor-pointer hover:text-red-600 transition block mb-1" title="Klik om kolom op nul te zetten" onclick="clearColumn('budget')">Budget</span>
                                         <input type="number" id="bulkBudget" placeholder="Vast..." class="bulk-header-input no-print" onchange="updateGlobalParam('bulkBudget', this.value)">
@@ -330,6 +333,7 @@
             maxCash: 200000,
             bulkP1: 26800,
             bulkP2: NaN,
+            bulkRe: NaN,
             bulkBudget: NaN,
             shuffleIndices: [...INITIAL_INDICES],
             yearlyManualInputs: {}
@@ -374,6 +378,7 @@
                     document.getElementById('maxCash').value = state.maxCash;
                     document.getElementById('bulkP1').value = isNaN(state.bulkP1) ? '' : state.bulkP1;
                     document.getElementById('bulkP2').value = isNaN(state.bulkP2) ? '' : state.bulkP2;
+                    document.getElementById('bulkRe').value = isNaN(state.bulkRe) ? '' : state.bulkRe;
                     document.getElementById('bulkBudget').value = isNaN(state.bulkBudget) ? '' : state.bulkBudget;
                 }
             } catch(e) {}
@@ -416,6 +421,13 @@
             } else {
                 const parsed = parseFloat(val);
                 state[id] = isNaN(parsed) ? (id.startsWith('bulk') ? NaN : 0) : parsed;
+                // Bulk-veld gewijzigd: wis individuele overschrijvingen voor die kolom
+                if (id.startsWith('bulk') && !isNaN(parsed)) {
+                    const colType = id[4].toLowerCase() + id.slice(5);
+                    Object.keys(state.yearlyManualInputs).forEach(key => {
+                        if (key.endsWith('_' + colType)) delete state.yearlyManualInputs[key];
+                    });
+                }
             }
             saveState();
             runSimulation();
@@ -473,9 +485,11 @@
                     else defBudget = 85000;
                 }
 
+                const defRe = !isNaN(state.bulkRe) ? state.bulkRe : 0;
+
                 const p1 = state.yearlyManualInputs[`${age}_p1`] ?? defP1;
                 const p2 = state.yearlyManualInputs[`${age}_p2`] ?? defP2;
-                const re = state.yearlyManualInputs[`${age}_re`] ?? 0;
+                const re = state.yearlyManualInputs[`${age}_re`] ?? defRe;
                 const budget = state.yearlyManualInputs[`${age}_budget`] ?? defBudget;
 
                 if (re > 0) {
