@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PensioenPlanner</title>
     
+    <!-- PWA / iOS Standalone Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pensioen">
@@ -16,13 +17,14 @@
         body { 
             -webkit-tap-highlight-color: transparent; 
             font-feature-settings: "tnum"; 
-            font-size: 10px; /* Terug naar compact */
+            font-size: 10px;
             padding-top: env(safe-area-inset-top);
         }
         
         .table-container { 
-            max-height: calc(100vh - 300px); 
+            max-height: calc(100vh - 280px); 
             overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
             border-radius: 0.75rem; 
         }
 
@@ -32,74 +34,78 @@
             font-size: 8px; padding: 6px 4px; text-transform: uppercase;
         }
         
-        .row-good { background-color: #dcfce7 !important; } 
-        .row-bad { background-color: #fff7ed !important; }  
+        /* Prioritaire kleuren voor de rijen */
+        .row-good { background-color: #dcfce7 !important; } /* Groen (Emerald 100) */
+        .row-bad { background-color: #fff7ed !important; }  /* Oranje (Orange 50) */
         .row-bankrupt { background-color: #fee2e2 !important; color: #b91c1c !important; font-weight: bold; }
 
-        .input-group { @apply flex items-center gap-1 bg-transparent border-b border-transparent focus-within:border-blue-500 focus-within:bg-white transition; }
+        .input-group { @apply flex items-center gap-1 bg-transparent border-b border-transparent focus-within:border-blue-500 focus-within:bg-white transition px-0.5; }
         .input-cell { @apply w-full bg-transparent py-0.5 text-right outline-none font-bold text-[10px]; }
         .fill-btn { @apply p-1 text-blue-400 active:text-blue-800 transition text-[10px] opacity-0 group-hover:opacity-100; }
         
         .card { @apply bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden; }
         #resetModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
 
+    <!-- Reset Modal -->
     <div id="resetModal" class="no-print">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-xs w-full mx-4 text-center">
-            <h3 class="text-base font-bold mb-2 text-slate-800 uppercase tracking-tighter">Alles op nul zetten?</h3>
+            <h3 class="text-sm font-bold mb-4 uppercase tracking-tighter">Alle invoer wissen?</h3>
             <div class="flex gap-2">
-                <button onclick="closeModal()" class="flex-1 px-4 py-2 bg-slate-100 rounded-xl font-bold text-xs uppercase">Nee</button>
-                <button onclick="confirmReset()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs uppercase">Ja</button>
+                <button onclick="closeModal()" class="flex-1 px-4 py-2 bg-slate-100 rounded-xl font-bold text-[10px]">ANNULEREN</button>
+                <button onclick="confirmReset()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-[10px]">JA, WISSEN</button>
             </div>
         </div>
     </div>
 
-    <div class="max-w-[1400px] mx-auto p-3">
+    <div class="max-w-[1400px] mx-auto p-2">
         <header class="mb-3 flex items-center justify-between">
             <h1 class="text-lg font-black text-slate-800 tracking-tighter italic leading-none">Pensioen<span class="text-blue-600">Planner</span></h1>
-            <div class="flex gap-2 no-print">
-                <button onclick="openResetModal()" class="bg-white border px-3 py-1 rounded-lg text-[9px] font-bold uppercase">Wissen</button>
-                <button onclick="shuffleAndRun()" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[9px] font-bold shadow-md shadow-blue-200 uppercase">Herschud</button>
+            <div class="flex gap-1 no-print">
+                <button onclick="openResetModal()" class="bg-white border px-2 py-1 rounded-lg text-[8px] font-bold uppercase">Wissen</button>
+                <button onclick="shuffleAndRun()" class="bg-blue-600 text-white px-2 py-1 rounded-lg text-[8px] font-bold shadow-blue-200 uppercase tracking-tighter">Herschud</button>
             </div>
         </header>
 
-        <!-- Stats Dashboard -->
+        <!-- Dashboard Stats -->
         <div class="grid grid-cols-4 gap-2 mb-3 text-center">
-            <div class="card p-2 bg-blue-600 text-white border-none">
-                <p class="text-[7px] font-bold uppercase mb-0.5 opacity-80">Eindkapitaal</p>
-                <h2 id="endResultText" class="text-xs font-black tracking-tight leading-none">€ 0</h2>
+            <div class="card p-2 bg-blue-600 text-white border-none shadow-md">
+                <p class="text-[7px] font-bold uppercase mb-0.5 opacity-80">Eindkapitaal (90j)</p>
+                <h2 id="endResultText" class="text-[11px] font-black leading-none italic">€ 0</h2>
             </div>
             <div class="card p-2 border-l-2 border-l-blue-500">
                 <p class="text-slate-400 text-[7px] font-bold uppercase mb-0.5">Totaal Inleg</p>
-                <h2 id="totalInlayText" class="text-xs font-black text-slate-800 leading-none">€ 0</h2>
+                <h2 id="totalInlayText" class="text-[11px] font-black text-slate-800 leading-none">€ 0</h2>
             </div>
             <div class="card p-2 border-l-2 border-l-green-500">
                 <p class="text-slate-400 text-[7px] font-bold uppercase mb-0.5">Netto Rend.</p>
-                <h2 id="totalReturnText" class="text-xs font-black text-slate-800 leading-none">0%</h2>
+                <h2 id="totalReturnText" class="text-[11px] font-black text-slate-800 leading-none">0%</h2>
             </div>
             <div class="card p-2 border-l-2 border-l-orange-500">
                 <p class="text-slate-400 text-[7px] font-bold uppercase mb-0.5">Drempel Nu</p>
-                <h2 id="thresholdValueText" class="text-xs font-black text-slate-800 leading-none">€ 0</h2>
+                <h2 id="thresholdValueText" class="text-[11px] font-black text-slate-800 leading-none">€ 0</h2>
             </div>
         </div>
 
         <div class="grid grid-cols-12 gap-3">
-            <aside class="col-span-3 space-y-3 no-print">
-                <div class="card p-3">
+            <!-- Sidebar -->
+            <aside class="col-span-3 space-y-2 no-print">
+                <div class="card p-3 border-blue-50">
                     <div class="space-y-3">
                         <div>
-                            <label class="block text-[7px] font-bold text-slate-400 uppercase mb-0.5">Strategie</label>
+                            <label class="block text-[7px] font-bold text-slate-400 uppercase mb-0.5">ETF Strategie</label>
                             <select id="selectedEtf" class="w-full bg-slate-50 border rounded-lg px-2 py-1 font-bold text-[9px] outline-none" onchange="updateGlobalParam('selectedEtf', this.value)">
                                 <option value="msci_acwi">MSCI ACWI (5.1%)</option>
                                 <option value="msci_world">MSCI World (5.5%)</option>
                                 <option value="sp500">S&P 500 (6.8%)</option>
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-2 gap-1">
                             <div>
-                                <label class="block text-[7px] font-bold text-slate-400 uppercase mb-0.5">Lft Start</label>
+                                <label class="block text-[7px] font-bold text-slate-400 uppercase mb-0.5">Start Lft</label>
                                 <input type="number" id="currentAge" value="65" class="w-full bg-slate-50 border rounded-lg px-2 py-1 font-bold text-[9px]" onchange="updateGlobalParam('currentAge', this.value)">
                             </div>
                             <div>
@@ -108,11 +114,11 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-[7px] font-bold text-slate-400 uppercase mb-0.5">Start ETF (€)</label>
+                            <label class="block text-[7px] font-bold text-slate-400 uppercase mb-0.5">Startwaarde ETF (€)</label>
                             <input type="number" id="startEtf" value="0" class="w-full bg-slate-50 border rounded-lg px-2 py-1 font-bold text-[9px]" onchange="updateGlobalParam('startEtf', this.value)">
                         </div>
                         <div>
-                            <label class="block text-[7px] font-bold text-slate-400 uppercase mb-0.5">Start Cash (€)</label>
+                            <label class="block text-[7px] font-bold text-slate-400 uppercase mb-0.5">Startwaarde Cash (€)</label>
                             <input type="number" id="startCash" value="0" class="w-full bg-slate-50 border rounded-lg px-2 py-1 font-bold text-[9px]" onchange="updateGlobalParam('startCash', this.value)">
                         </div>
                         <div>
@@ -123,19 +129,20 @@
                 </div>
             </aside>
 
+            <!-- Table -->
             <main class="col-span-9">
-                <div class="card shadow-sm">
+                <div class="card">
                     <div class="table-container">
                         <table class="w-full text-left">
                             <thead>
                                 <tr class="text-slate-400 border-b">
-                                    <th class="border-r w-8 text-center">Lft</th>
+                                    <th class="border-r w-8 text-center italic">Lft</th>
                                     <th class="w-16">In Ik</th>
                                     <th class="w-16">Partner</th>
                                     <th class="w-16 text-blue-600">Inleg</th>
                                     <th class="w-16 border-r">Budget</th>
                                     <th class="text-right">Rend%</th>
-                                    <th class="text-right text-blue-600">Inleg Cum.</th>
+                                    <th class="text-right text-blue-600">Totaal In</th>
                                     <th class="text-right text-orange-600">Drempel</th>
                                     <th class="text-right">ETF Stand</th>
                                     <th class="text-right">Cash</th>
@@ -170,18 +177,15 @@
 
         let state = {
             selectedEtf: "msci_acwi", currentAge: 65, startEtf: 0, startCash: 0,
-            threshold: 4, maxCash: 200000, shuffleIndices: Array.from({length: BASE_RETURNS.length}, (_, i) => i),
+            threshold: 4, maxCash: 200000, shuffleIndices: Array.from({length: 80}, (_, i) => i),
             yearlyManualInputs: {} 
         };
 
-        function saveState() { localStorage.setItem('pensioen_final_v5', JSON.stringify(state)); }
+        function saveState() { localStorage.setItem('pensioen_final_prod', JSON.stringify(state)); }
         function loadState() {
-            const saved = localStorage.getItem('pensioen_final_v5');
+            const saved = localStorage.getItem('pensioen_final_prod');
             if (saved) {
-                const parsed = JSON.parse(saved);
-                state = { ...state, ...parsed };
-                // Zorg dat de index-array nooit langer is dan de data (voorkomt NaN)
-                state.shuffleIndices = state.shuffleIndices.filter(i => i < BASE_RETURNS.length);
+                state = { ...state, ...JSON.parse(saved) };
                 Object.keys(state).forEach(k => { if(document.getElementById(k)) document.getElementById(k).value = state[k]; });
             }
         }
@@ -210,20 +214,16 @@
         function openResetModal() { document.getElementById('resetModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('resetModal').style.display = 'none'; }
         function confirmReset() { state.yearlyManualInputs = {}; saveState(); runSimulation(); closeModal(); }
-        function shuffleAndRun() { 
-            state.shuffleIndices = Array.from({length: BASE_RETURNS.length}, (_, i) => i);
-            state.shuffleIndices.sort(() => Math.random() - 0.5); 
-            saveState(); runSimulation(); 
-        }
+        function shuffleAndRun() { state.shuffleIndices.sort(() => Math.random() - 0.5); saveState(); runSimulation(); }
 
         function runSimulation() {
             const tbody = document.getElementById('simulationBody');
             tbody.innerHTML = '';
 
-            let currentEtf = state.startEtf; 
-            let currentCash = state.startCash;
+            let curETF = state.startEtf; 
+            let curCash = state.startCash;
             let runningTotalIn = state.startEtf + state.startCash;
-            let currentDrempel = state.startEtf;
+            let curDrempel = state.startEtf;
 
             const thresholdPct = state.threshold / 100;
             const activeReturns = ETF_DATA[state.selectedEtf].returns;
@@ -236,60 +236,64 @@
                 const budget = state.yearlyManualInputs[`${age}_budget`] ?? 0;
 
                 let rowColor = "row-bad";
-                let needs = Math.max(0, budget - (p1 + p2));
+                let netNeeds = Math.max(0, budget - (p1 + p2));
 
-                // --- 1. OOGST (1 Jan, vanaf Jaar 2) ---
+                // --- 1 JANUARI OCHTEND: HERVERDELING (NIET IN JAAR 1) ---
                 if (age > state.currentAge) {
-                    if (currentEtf > currentDrempel) {
+                    if (curETF > curDrempel) {
                         rowColor = "row-good";
-                        let surplus = currentEtf - currentDrempel;
+                        let surplus = curETF - curDrempel;
                         
-                        let taken = Math.min(needs, surplus);
-                        currentEtf -= taken;
-                        currentDrempel -= taken;
-                        needs -= taken;
+                        // Oogst budget uit surplus
+                        let harvestBudget = Math.min(netNeeds, surplus);
+                        curETF -= harvestBudget;
+                        curDrempel -= harvestBudget;
+                        netNeeds -= harvestBudget;
 
-                        surplus = currentEtf - currentDrempel;
-                        if (currentCash < state.maxCash && surplus > 0) {
-                            let refill = Math.min(state.maxCash - currentCash, surplus);
-                            currentEtf -= refill;
-                            currentDrempel -= refill;
-                            currentCash += refill;
+                        // Vul Cash aan uit restant surplus
+                        surplus = curETF - curDrempel;
+                        if (curCash < state.maxCash && surplus > 0) {
+                            let refillNeeded = state.maxCash - curCash;
+                            let refillAmt = Math.min(refillNeeded, surplus);
+                            curETF -= refillAmt;
+                            curDrempel -= refillAmt;
+                            curCash += refillAmt;
                         }
                     }
                 }
 
-                // --- 2. RESTANT BUDGET (Cash of Geforceerd) ---
-                let fromCash = Math.min(needs, Math.max(0, currentCash));
-                currentCash -= fromCash;
-                needs -= fromCash;
+                // --- ONTTREKKING VOOR BUDGET ---
+                // Tekort uit Cash
+                let fromCash = Math.min(netNeeds, Math.max(0, curCash));
+                curCash -= fromCash;
+                netNeeds -= fromCash;
 
-                if (needs > 0) {
-                    let forced = Math.min(needs, Math.max(0, currentEtf));
-                    currentEtf -= forced;
-                    currentDrempel -= forced;
-                    needs -= forced;
+                // Restant geforceerd uit ETF (Drempel daalt mee)
+                if (netNeeds > 0) {
+                    let forced = Math.min(netNeeds, Math.max(0, curETF));
+                    curETF -= forced;
+                    curDrempel -= forced;
+                    netNeeds -= forced;
                 }
 
-                // --- 3. INLEG (1 Jan) ---
+                // --- NIEUWE INLEG (1 JANUARI) ---
                 if (inv > 0) {
-                    currentEtf += inv;
-                    currentDrempel += inv;
+                    curETF += inv;
+                    curDrempel += inv;
                     runningTotalIn += inv;
                 }
 
-                const displayDrempel = currentDrempel;
+                const displayDrempel = curDrempel;
 
-                // --- 4. MARKTGROEI ---
-                // NOOIT NaN: gebruik modulo op de shuffle array lengte
-                const dataIndex = state.shuffleIndices[yearIdx % state.shuffleIndices.length];
+                // --- JAARVERLOOP (BEURS) ---
+                const dataIndex = state.shuffleIndices[yearIdx % activeReturns.length];
                 const annualReturn = activeReturns[dataIndex] || 0;
-                if (currentEtf > 0) currentEtf *= (1 + annualReturn);
+                if (curETF > 0) curETF *= (1 + annualReturn);
 
-                // --- 5. FINISH JAAR ---
-                const totaal = currentEtf + currentCash;
+                // --- EINDE JAAR: FAILLIET CHECK & INDEXERING ---
+                const totaal = curETF + curCash;
                 if (totaal <= 0) rowColor = "row-bankrupt";
-                currentDrempel *= (1 + thresholdPct);
+                curDrempel *= (1 + thresholdPct);
 
                 // RENDERING
                 const row = document.createElement('tr');
@@ -304,14 +308,14 @@
                     </td>`;
 
                 row.innerHTML = `
-                    <td class="p-1 font-bold border-r text-center text-slate-400 bg-slate-50/20 italic">${age}</td>
+                    <td class="p-2 font-bold border-r text-center text-slate-400 bg-slate-50/20 italic">${age}</td>
                     ${cell('p1', p1)} ${cell('p2', p2)} ${cell('inv', inv, 'text-blue-600')} ${cell('budget', budget, 'text-slate-900')}
-                    <td class="p-1 text-right font-mono border-l ${annualReturn>=0?'text-green-600':'text-red-500'}">${(annualReturn*100).toFixed(1)}%</td>
-                    <td class="p-1 text-right font-mono text-blue-600">€${Math.round(runningTotalIn).toLocaleString('nl-BE')}</td>
-                    <td class="p-1 text-right font-mono text-orange-600 font-bold">€${Math.round(displayDrempel).toLocaleString('nl-BE')}</td>
-                    <td class="p-1 text-right font-mono font-bold">€${Math.round(currentEtf).toLocaleString('nl-BE')}</td>
-                    <td class="p-1 text-right font-mono">€${Math.round(currentCash).toLocaleString('nl-BE')}</td>
-                    <td class="p-1 text-right font-mono font-black border-l bg-slate-50/20">€${Math.round(totaal).toLocaleString('nl-BE')}</td>
+                    <td class="p-2 text-right font-mono border-l ${annualReturn>=0?'text-green-600':'text-red-500'}">${(annualReturn*100).toFixed(1)}%</td>
+                    <td class="p-2 text-right font-mono text-blue-600">€${Math.round(runningTotalIn).toLocaleString('nl-BE')}</td>
+                    <td class="p-2 text-right font-mono text-orange-600 font-bold">€${Math.round(displayDrempel).toLocaleString('nl-BE')}</td>
+                    <td class="p-2 text-right font-mono font-bold">€${Math.round(curETF).toLocaleString('nl-BE')}</td>
+                    <td class="p-2 text-right font-mono">€${Math.round(curCash).toLocaleString('nl-BE')}</td>
+                    <td class="p-2 text-right font-mono font-black border-l bg-slate-50/20">€${Math.round(totaal).toLocaleString('nl-BE')}</td>
                 `;
                 tbody.appendChild(row);
 
